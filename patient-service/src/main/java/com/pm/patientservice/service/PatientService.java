@@ -10,6 +10,7 @@ import com.pm.patientservice.repository.PatientRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,11 +22,27 @@ public class PatientService {
         this.patientRepository = patientRepository;
     }
 
-    public List<PatientResponseDTO> getPatients(){
-        List<Patient> patients = patientRepository.findAll();
+    public List<PatientResponseDTO> getPatients() {
+        try {
+            // 1. Lấy dữ liệu từ Repo
+            List<Patient> patients = patientRepository.findAll();
 
-        return patients.stream()
-                .map(PatientMapper::toDTO).toList();
+            // 2. Kiểm tra nếu danh sách rỗng
+            if (patients.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            // 3. Map sang DTO
+            return patients.stream()
+                    .map(PatientMapper::toDTO)
+                    .toList();
+
+        } catch (Exception e) {
+            // In ra log để biết chính xác cột nào hoặc dòng nào bị lỗi mapping
+            System.err.println("Lỗi tại PatientService: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // Hoặc return Collections.emptyList() tùy bạn
+        }
     }
 
     public PatientResponseDTO createPatient(PatientRequestDTO patientRequestDTO){
