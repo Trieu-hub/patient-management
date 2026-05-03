@@ -1,5 +1,6 @@
 package com.pm.patientservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
@@ -44,6 +45,7 @@ public class PatientResponseDTO {
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
+
     public LocalDate getRegisteredDate() {
         return registeredDate;
     }
@@ -57,6 +59,8 @@ public class PatientResponseDTO {
     private String name;
     private String email;
     private String address;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateOfBirth;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate registeredDate;
 }
