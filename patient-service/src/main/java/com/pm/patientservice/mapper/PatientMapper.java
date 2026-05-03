@@ -9,12 +9,20 @@ import java.time.LocalDate;
 public class PatientMapper {
     public static PatientResponseDTO toDTO(Patient patient){
         PatientResponseDTO patientDTO = new PatientResponseDTO();
-        patientDTO.setId(patient.getId().toString());
+        patientDTO.setId(patient.getId());
         patientDTO.setName(patient.getName());
         patientDTO.setAddress(patient.getAddress());
         patientDTO.setEmail(patient.getEmail());
-        patientDTO.setDateOfBirth(patientDTO.getDateOfBirth().toString());
+//        patientDTO.setDateOfBirth(patientDTO.getDateOfBirth());
+        if (patient.getDateOfBirth() != null) {
+            patientDTO.setDateOfBirth(patient.getDateOfBirth());
+        } else {
+            patientDTO.setDateOfBirth(null);
+        }
 
+        if (patient.getRegisteredDate() != null) {
+            patientDTO.setRegisteredDate(patient.getRegisteredDate());
+        }
         return patientDTO;
     }
 

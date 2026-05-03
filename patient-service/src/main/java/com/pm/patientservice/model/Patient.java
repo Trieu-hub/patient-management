@@ -12,6 +12,7 @@ public class Patient {
 
     @Id
     @Column(columnDefinition = "CHAR(36)")
+    @GeneratedValue
     private String id;
 
     @NotNull
