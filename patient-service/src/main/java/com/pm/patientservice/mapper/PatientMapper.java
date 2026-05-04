@@ -24,6 +24,8 @@ public class PatientMapper {
 
         if (patient.getRegisteredDate() != null) {
             patientDTO.setRegisteredDate(patient.getRegisteredDate());
+        } else {
+            patientDTO.setRegisteredDate(null);
         }
         return patientDTO;
     }
