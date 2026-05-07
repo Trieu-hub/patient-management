@@ -1,66 +1,51 @@
 package com.pm.patientservice.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.validation.constraints.NotNull;
-
-import java.time.LocalDate;
-
 public class PatientResponseDTO {
-    public String getId() {
-        return id;
-    }
+  private String id;
+  private String name;
+  private String email;
+  private String address;
+  private String dateOfBirth;
 
-    public void setId(String id) {
-        this.id = id;
-    }
+  public String getId() {
+    return id;
+  }
 
-    public String getName() {
-        return name;
-    }
+  public void setId(String id) {
+    this.id = id;
+  }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+  public String getName() {
+    return name;
+  }
 
-    public String getEmail() {
-        return email;
-    }
+  public void setName(String name) {
+    this.name = name;
+  }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+  public String getEmail() {
+    return email;
+  }
 
-    public String getAddress() {
-        return address;
-    }
+  public void setEmail(String email) {
+    this.email = email;
+  }
 
-    public void setAddress(String address) {
-        this.address = address;
-    }
+  public String getAddress() {
+    return address;
+  }
 
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
+  public void setAddress(String address) {
+    this.address = address;
+  }
 
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
+  public String getDateOfBirth() {
+    return dateOfBirth;
+  }
 
-    public LocalDate getRegisteredDate() {
-        return registeredDate;
-    }
-
-    public void setRegisteredDate(LocalDate registeredDate) {
-        this.registeredDate = registeredDate;
-    }
+  public void setDateOfBirth(String dateOfBirth) {
+    this.dateOfBirth = dateOfBirth;
+  }
 
 
-    private String id;
-    private String name;
-    private String email;
-    private String address;
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate dateOfBirth;
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate registeredDate;
 }
