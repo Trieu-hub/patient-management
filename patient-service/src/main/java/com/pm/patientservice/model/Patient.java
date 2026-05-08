@@ -33,7 +33,7 @@ public class Patient {
   @NotNull
   private LocalDate registeredDate;
 
-  public UUID getId() {
+  public @NotNull UUID getId() {
     return id;
   }
 
