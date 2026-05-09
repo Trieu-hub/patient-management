@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -45,5 +46,15 @@ public class GlobalExceptionHandler {
     Map<String, String> errors = new HashMap<>();
     errors.put("message", "Patient not found");
     return ResponseEntity.badRequest().body(errors);
+  }
+
+  @ExceptionHandler(BillingServiceException.class)
+  public ResponseEntity<Map<String, String>> handleBillingServiceException(
+      BillingServiceException ex) {
+    log.error("Billing service error: {}", ex.getMessage(), ex);
+
+    Map<String, String> errors = new HashMap<>();
+    errors.put("message", "Patient creation failed: billing service unavailable");
+    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(errors);
   }
 }

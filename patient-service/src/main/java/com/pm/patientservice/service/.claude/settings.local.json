@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker inspect patient-service *)",
+      "Bash(docker build *)",
+      "Bash(docker stop *)",
+      "Bash(docker rm *)",
+      "Bash(docker run *)",
+      "Bash(timeout 20 bash -c \"until docker logs patient-service 2>&1 | grep -q 'Started PatientServiceApplication'; do sleep 1; done\")"
+    ]
+  }
+}

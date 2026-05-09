@@ -1,5 +1,7 @@
 package com.pm.patientservice.kafka;
+
 import com.pm.patientservice.model.Patient;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -25,10 +27,13 @@ public class KafkaProducer {
         .setEventType("PATIENT_CREATED")
         .build();
 
-    try {
-      kafkaTemplate.send("patient", event.toByteArray());
-    } catch (Exception e) {
-      log.error("Error sending PatientCreated event: {}", event);
-    }
+    CompletableFuture.runAsync(() -> {
+      try {
+        kafkaTemplate.send("patient", event.toByteArray());
+        log.info("PatientCreated event sent for patientId: {}", patient.getId());
+      } catch (Exception e) {
+        log.error("Error sending PatientCreated event for patientId: {}", patient.getId(), e);
+      }
+    });
   }
 }

@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PatientService {
@@ -35,6 +36,7 @@ public class PatientService {
     return patients.stream().map(PatientMapper::toDTO).toList();
   }
 
+  @Transactional
   public PatientResponseDTO createPatient(PatientRequestDTO patientRequestDTO) {
     if (patientRepository.existsByEmail(patientRequestDTO.getEmail())) {
       throw new EmailAlreadyExistsException(
