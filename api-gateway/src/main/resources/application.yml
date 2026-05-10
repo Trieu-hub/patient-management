@@ -1,6 +1,10 @@
 server:
   port: 4004 # Gateway listens on port 4004
 
+auth:
+  service:
+    url: http://auth-service:4005
+
 spring:
   cloud:
     gateway:

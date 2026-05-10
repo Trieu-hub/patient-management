@@ -1,5 +1,6 @@
 ### GET request to get all patients
 #GET http://lb-7e648e08.elb.localhost.localstack.cloud:4004/api/patients
 #Authorization: Bearer {{token}}
-GET localhost:4000/patients
+#GET localhost:4000/patients đã đóng port của patient-service nên không dùng nữa
+GET localhost:4004/api/patients
 ###
