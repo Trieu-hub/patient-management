@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Path \"D:\\\\patient-management\" -Recurse -Depth 2 -Filter \"docker-compose*\")",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(docker run *)"
     ]
   }
 }
