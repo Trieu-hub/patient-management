@@ -68,7 +68,7 @@ public class LocalStack extends Stack {
             "auth-service",
             List.of(4005),
             authServiceDb,
-            Map.of("JWT_SECRET", "Y2hhVEc3aHJnb0hYTzMyZ2ZqVkpiZ1RkZG93YWxrUkM="));
+            Map.of("JWT_SECRET", "c3VwZXItc2VjcmV0LWtleS1mb3Itand0LWF1dGgtMjAyNi1sb25nLWVub3VnaA=="));
 
     authService.getNode().addDependency(authDbHealthCheck);
     authService.getNode().addDependency(authServiceDb);
@@ -141,6 +141,7 @@ public class LocalStack extends Stack {
         .build();
   }
 
+  //tạo kafka cluster dựa trên msk
   private CfnCluster createMskCluster(){
     return CfnCluster.Builder.create(this, "MskCluster")
         .clusterName("kafa-cluster")
@@ -156,6 +157,8 @@ public class LocalStack extends Stack {
         .build();
   }
 
+  //cho phép các microservices tìm và giao tieeos với nhau tooong qua domain là "patient-management.local"
+  //v dụ: auth-service.patient-management.local
   private Cluster createEcsCluster(){
     return Cluster.Builder.create(this, "PatientManagementCluster")
         .vpc(vpc)
@@ -187,6 +190,7 @@ public class LocalStack extends Stack {
                     .protocol(Protocol.TCP)
                     .build())
                 .toList())
+                //đoạn code sau giúp tìm tất cả log của containers dễ hơn
             .logging(LogDriver.awsLogs(AwsLogDriverProps.builder()
                     .logGroup(LogGroup.Builder.create(this, id + "LogGroup")
                         .logGroupName("/ecs/" + imageName)
@@ -203,6 +207,7 @@ public class LocalStack extends Stack {
       envVars.putAll(additionalEnvVars);
     }
 
+    //đoạn code giúp chạy đi chạy lại nhiều lần chứ không phải 1 rồi fail luôn
     if(db != null){
       envVars.put("SPRING_DATASOURCE_URL", "jdbc:postgresql://%s:%s/%s-db".formatted(
           db.getDbInstanceEndpointAddress(),
@@ -220,6 +225,7 @@ public class LocalStack extends Stack {
     containerOptions.environment(envVars);
     taskDefinition.addContainer(imageName + "Container", containerOptions.build());
 
+    //bảo đảm fargateService sẽ chạy các ecs task
     return FargateService.Builder.create(this, id)
         .cluster(ecsCluster)
         .taskDefinition(taskDefinition)
