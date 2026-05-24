@@ -3,3 +3,7 @@ hiểu cách cấu hình localstack và đã chạy thêm 1 vài lệnh cơ bả
 
 23/5 
 đã xóa msi vì dính lỗi không chạy được các lệnh trong git bash
+
+24/5
+CloudFormationTemplate giúp define và cung cấp infrastructure as a single configuration file
+file này chứa toàn bộ code và những thứ cần thiết cho tất cả services của project
