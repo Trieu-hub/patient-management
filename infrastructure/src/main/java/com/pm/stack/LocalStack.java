@@ -3,7 +3,6 @@ package com.pm.stack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import software.amazon.awscdk.App;
 import software.amazon.awscdk.AppProps;
 import software.amazon.awscdk.BootstraplessSynthesizer;
@@ -11,14 +10,8 @@ import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.RemovalPolicy;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
-import software.amazon.awscdk.Token;
-import software.amazon.awscdk.services.ec2.ISubnet;
-import software.amazon.awscdk.services.ec2.InstanceClass;
-import software.amazon.awscdk.services.ec2.InstanceSize;
-import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecs.AwsLogDriverProps;
-import software.amazon.awscdk.services.ecs.CloudMapNamespaceOptions;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.ContainerDefinitionOptions;
 import software.amazon.awscdk.services.ecs.ContainerImage;
@@ -30,53 +23,38 @@ import software.amazon.awscdk.services.ecs.Protocol;
 import software.amazon.awscdk.services.ecs.patterns.ApplicationLoadBalancedFargateService;
 import software.amazon.awscdk.services.logs.LogGroup;
 import software.amazon.awscdk.services.logs.RetentionDays;
-import software.amazon.awscdk.services.msk.CfnCluster;
-import software.amazon.awscdk.services.rds.Credentials;
-import software.amazon.awscdk.services.rds.DatabaseInstance;
-import software.amazon.awscdk.services.rds.DatabaseInstanceEngine;
-import software.amazon.awscdk.services.rds.PostgresEngineVersion;
-import software.amazon.awscdk.services.rds.PostgresInstanceEngineProps;
-import software.amazon.awscdk.services.route53.CfnHealthCheck;
 
 public class LocalStack extends Stack {
   private final Vpc vpc;
   private final Cluster ecsCluster;
 
+  // LocalStack Free does not support RDS or MSK.
+  // Databases run via docker-compose and are reachable on the host ports below.
+  private static final String AUTH_DB_URL =
+      "jdbc:postgresql://host.docker.internal:5433/db";
+  private static final String PATIENT_DB_URL =
+      "jdbc:postgresql://host.docker.internal:5434/db";
+  private static final String LOCAL_DB_PASSWORD = "password";
+  // docker-compose bitnami/kafka exposes the EXTERNAL listener on host port 9094
+  private static final String KAFKA_BOOTSTRAP = "host.docker.internal:9094";
+
   public LocalStack(final App scope, final String id, final StackProps props){
     super(scope, id, props);
 
     this.vpc = createVpc();
-
-    DatabaseInstance authServiceDb =
-        createDatabase("AuthServiceDB", "auth-service-db");
-
-    DatabaseInstance patientServiceDb =
-        createDatabase("PatientServiceDB", "patient-service-db");
-
-    CfnHealthCheck authDbHealthCheck =
-        createDbHealthCheck(authServiceDb, "AuthServiceDBHealthCheck");
-
-    CfnHealthCheck patientDbHealthCheck =
-        createDbHealthCheck(patientServiceDb, "PatientServiceDBHealthCheck");
-
-    CfnCluster mskCluster = createMskCluster();
-
     this.ecsCluster = createEcsCluster();
 
     FargateService authService =
         createFargateService("AuthService",
             "auth-service",
             List.of(4005),
-            authServiceDb,
+            AUTH_DB_URL,
             Map.of("JWT_SECRET", "c3VwZXItc2VjcmV0LWtleS1mb3Itand0LWF1dGgtMjAyNi1sb25nLWVub3VnaA=="));
-
-    authService.getNode().addDependency(authDbHealthCheck);
-    authService.getNode().addDependency(authServiceDb);
 
     FargateService billingService =
         createFargateService("BillingService",
             "billing-service",
-            List.of(4001,9001),
+            List.of(4001, 9001),
             null,
             null);
 
@@ -87,20 +65,15 @@ public class LocalStack extends Stack {
             null,
             null);
 
-    analyticsService.getNode().addDependency(mskCluster);
-
     FargateService patientService = createFargateService("PatientService",
         "patient-service",
         List.of(4000),
-        patientServiceDb,
+        PATIENT_DB_URL,
         Map.of(
             "BILLING_SERVICE_ADDRESS", "host.docker.internal",
             "BILLING_SERVICE_GRPC_PORT", "9001"
         ));
-    patientService.getNode().addDependency(patientServiceDb);
-    patientService.getNode().addDependency(patientDbHealthCheck);
     patientService.getNode().addDependency(billingService);
-    patientService.getNode().addDependency(mskCluster);
 
     createApiGatewayService();
   }
@@ -113,65 +86,17 @@ public class LocalStack extends Stack {
         .build();
   }
 
-  private DatabaseInstance createDatabase(String id, String dbName){
-    return DatabaseInstance.Builder
-        .create(this, id)
-        .engine(DatabaseInstanceEngine.postgres(
-            PostgresInstanceEngineProps.builder()
-                .version(PostgresEngineVersion.VER_17_2)
-                .build()))
-        .vpc(vpc)
-        .instanceType(InstanceType.of(InstanceClass.BURSTABLE2, InstanceSize.MICRO))
-        .allocatedStorage(20)
-        .credentials(Credentials.fromGeneratedSecret("admin_user"))
-        .databaseName(dbName)
-        .removalPolicy(RemovalPolicy.DESTROY)
-        .build();
-  }
-
-  private CfnHealthCheck createDbHealthCheck(DatabaseInstance db, String id){
-    return CfnHealthCheck.Builder.create(this, id)
-        .healthCheckConfig(CfnHealthCheck.HealthCheckConfigProperty.builder()
-            .type("TCP")
-            .port(Token.asNumber(db.getDbInstanceEndpointPort()))
-            .ipAddress(db.getDbInstanceEndpointAddress())
-            .requestInterval(30)
-            .failureThreshold(3)
-            .build())
-        .build();
-  }
-
-  //tạo kafka cluster dựa trên msk
-  private CfnCluster createMskCluster(){
-    return CfnCluster.Builder.create(this, "MskCluster")
-        .clusterName("kafa-cluster")
-        .kafkaVersion("2.8.0")
-        .numberOfBrokerNodes(1)
-        .brokerNodeGroupInfo(CfnCluster.BrokerNodeGroupInfoProperty.builder()
-            .instanceType("kafka.m5.xlarge")
-            .clientSubnets(vpc.getPrivateSubnets().stream()
-                .map(ISubnet::getSubnetId)
-                .collect(Collectors.toList()))
-            .brokerAzDistribution("DEFAULT")
-            .build())
-        .build();
-  }
-
-  //cho phép các microservices tìm và giao tieeos với nhau tooong qua domain là "patient-management.local"
-  //v dụ: auth-service.patient-management.local
   private Cluster createEcsCluster(){
+    // defaultCloudMapNamespace (AWS::ServiceDiscovery::PrivateDnsNamespace) is Pro-only in LocalStack
     return Cluster.Builder.create(this, "PatientManagementCluster")
         .vpc(vpc)
-        .defaultCloudMapNamespace(CloudMapNamespaceOptions.builder()
-            .name("patient-management.local")
-            .build())
         .build();
   }
 
   private FargateService createFargateService(String id,
       String imageName,
       List<Integer> ports,
-      DatabaseInstance db,
+      String dbUrl,
       Map<String, String> additionalEnvVars) {
 
     FargateTaskDefinition taskDefinition =
@@ -190,7 +115,6 @@ public class LocalStack extends Stack {
                     .protocol(Protocol.TCP)
                     .build())
                 .toList())
-                //đoạn code sau giúp tìm tất cả log của containers dễ hơn
             .logging(LogDriver.awsLogs(AwsLogDriverProps.builder()
                     .logGroup(LogGroup.Builder.create(this, id + "LogGroup")
                         .logGroupName("/ecs/" + imageName)
@@ -201,22 +125,16 @@ public class LocalStack extends Stack {
                 .build()));
 
     Map<String, String> envVars = new HashMap<>();
-    envVars.put("SPRING_KAFKA_BOOTSTRAP_SERVERS", "localhost.localstack.cloud:4510, localhost.localstack.cloud:4511, localhost.localstack.cloud:4512");
+    envVars.put("SPRING_KAFKA_BOOTSTRAP_SERVERS", KAFKA_BOOTSTRAP);
 
     if(additionalEnvVars != null){
       envVars.putAll(additionalEnvVars);
     }
 
-    //đoạn code giúp chạy đi chạy lại nhiều lần chứ không phải 1 rồi fail luôn
-    if(db != null){
-      envVars.put("SPRING_DATASOURCE_URL", "jdbc:postgresql://%s:%s/%s-db".formatted(
-          db.getDbInstanceEndpointAddress(),
-          db.getDbInstanceEndpointPort(),
-          imageName
-      ));
+    if(dbUrl != null){
+      envVars.put("SPRING_DATASOURCE_URL", dbUrl);
       envVars.put("SPRING_DATASOURCE_USERNAME", "admin_user");
-      envVars.put("SPRING_DATASOURCE_PASSWORD",
-          db.getSecret().secretValueFromJson("password").toString());
+      envVars.put("SPRING_DATASOURCE_PASSWORD", LOCAL_DB_PASSWORD);
       envVars.put("SPRING_JPA_HIBERNATE_DDL_AUTO", "update");
       envVars.put("SPRING_SQL_INIT_MODE", "always");
       envVars.put("SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT", "60000");
@@ -225,7 +143,6 @@ public class LocalStack extends Stack {
     containerOptions.environment(envVars);
     taskDefinition.addContainer(imageName + "Container", containerOptions.build());
 
-    //bảo đảm fargateService sẽ chạy các ecs task
     return FargateService.Builder.create(this, id)
         .cluster(ecsCluster)
         .taskDefinition(taskDefinition)
@@ -265,10 +182,8 @@ public class LocalStack extends Stack {
                 .build()))
             .build();
 
-
     taskDefinition.addContainer("APIGatewayContainer", containerOptions);
 
-    //đoạn code sau sẽ tự động tạo load balanced cho service mà không cần chạy tay
     ApplicationLoadBalancedFargateService apiGateway =
         ApplicationLoadBalancedFargateService.Builder.create(this, "APIGatewayService")
             .cluster(ecsCluster)
