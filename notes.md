@@ -7,3 +7,6 @@ hiểu cách cấu hình localstack và đã chạy thêm 1 vài lệnh cơ bả
 24/5
 CloudFormationTemplate giúp define và cung cấp infrastructure as a single configuration file
 file này chứa toàn bộ code và những thứ cần thiết cho tất cả services của project
+
+25/5
+bắt đầu chuẩn bị các images để deploy

@@ -268,6 +268,7 @@ public class LocalStack extends Stack {
 
     taskDefinition.addContainer("APIGatewayContainer", containerOptions);
 
+    //đoạn code sau sẽ tự động tạo load balanced cho service mà không cần chạy tay
     ApplicationLoadBalancedFargateService apiGateway =
         ApplicationLoadBalancedFargateService.Builder.create(this, "APIGatewayService")
             .cluster(ecsCluster)
